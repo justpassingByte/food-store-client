@@ -47,7 +47,7 @@ const Header = ({userId} : HeaderProps) => {
                 <MainNav scrolled={isScrolled}/>
                 {userId? (
                     <div className='ml-4 flex items-center space-x-4'>
-                        <UserButton afterSingOutUrl="/"/>
+                        <UserButton afterSignOutUrl="/"/>
                     </div>
 
                 ) : (
