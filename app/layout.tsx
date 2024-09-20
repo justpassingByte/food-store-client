@@ -6,7 +6,6 @@ import { Poppins } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import Header from "@/components/header";
-import Image from "next/image";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -27,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={poppins.className}>
-        <Image src="/images/hero.svg" className="absolute -z-10 right-0 w-full md:w-[60%]" alt=""/>
+        <img src="/images/hero.svg" className="absolute -z-10 right-0 w-full md:w-[60%]" alt=""/>
         <ClerkProvider>
         <Header userId = {userId}/>
           {children}
