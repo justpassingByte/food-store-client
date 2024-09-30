@@ -70,7 +70,7 @@ const PageContent = ({ products }: PageContentProps) => {
                     ? 
                     <> 
                     {products.map(product =>(
-                        <PopularProducts data={product} key={product.id} />
+                        <PopularProducts data={product} key={product.id}  />
                     ))}
                     </> 
                     : 

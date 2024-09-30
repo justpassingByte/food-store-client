@@ -9,9 +9,8 @@ import getCuisines from "@/action/get-cuisine"
 import SizeFilter from "./components/size-filter"
 import KitchenFilter from "./components/kitchen-filter"
 import CuisineFilter from "./components/cuisine-filter"
-import Footer from "@/components/footer"
 import PageContent from "./components/page-content"
-import getProducts from "@/action/get-product"
+import getProducts from "@/action/get-products"
 export const revalidate = 0
 interface MenuProps{
     searchParams:{
@@ -55,7 +54,6 @@ const MenuPage = async({searchParams}: MenuProps) => {
                 <PageContent products={products}/>
             </Box>
         </div>
-        <Footer/>
     </Container>
    
   )

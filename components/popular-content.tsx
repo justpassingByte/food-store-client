@@ -1,12 +1,13 @@
 "use client"
 
-import { Products } from "@/type-db"
 import { Card, CardDescription, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "./ui/button"
 import { Heart, HeartCrack, ShoppingCart } from "lucide-react"
 import { useState } from "react"
+import useCarts from "@/hooks/usecart"
+import { Products } from "@/type-db"
 
 interface PopularProductsProps {
     data: Products
@@ -15,6 +16,10 @@ export const PopularProducts = ({ data }: PopularProductsProps) => {
 
     const [isLiked,setIsLiked] = useState(false)
     const IsLikedIcon = isLiked ? Heart : HeartCrack
+    const cart = useCarts()
+    const addToCart = (data:Products) =>{
+        cart.addItem({...data,qty: 1})
+    }
     return (
         <Card className="w-full max-h-[340px] rounded-md bg-white shadow-lg border-none flex flex-col items-center justify-center relative py-6 pt-24 md:pt-36">
             <div className="absolute -top-[4%] md:-top-[20%] overflow-hidden w-24 md:w-40 h-24 md:h-40 rounded-full bg-hero 
@@ -74,7 +79,8 @@ export const PopularProducts = ({ data }: PopularProductsProps) => {
                     <Button className="bg-hero w-full rounded-full"> Buy now</Button>
                 </Link>
             </div>
-            <Button className="absolute top-0 right-0 rounded-tl-none rounded-tr-lg rounded-br-none p-2 px-3">
+            <Button onClick={() => addToCart(data)}
+            className="absolute top-0 right-0 rounded-tl-none rounded-tr-lg rounded-br-none p-2 px-3">
                 <ShoppingCart
                     className="w-4 h-4"
                 />

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {UserButton} from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import MainNav from '@/components/mainNav'
+import CartActionButton from './ui/cart-action'
 interface HeaderProps{
     userId: string | null
 }
@@ -48,6 +49,7 @@ const Header = ({userId} : HeaderProps) => {
                 {userId? (
                     <div className='ml-4 flex items-center space-x-4'>
                         <UserButton afterSignOutUrl="/"/>
+                        <CartActionButton/>
                     </div>
 
                 ) : (

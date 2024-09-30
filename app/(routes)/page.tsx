@@ -1,6 +1,5 @@
-import getProducts from "@/action/get-product"
+import getProducts from "@/action/get-products"
 import Container from "@/components/container"
-import Footer from "@/components/footer"
 import { PopularProducts } from "@/components/popular-content"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardTitle } from "@/components/ui/card"
@@ -10,7 +9,7 @@ import Link from "next/link"
 
 export const revalidate = 0
 const HomePage = async () => {
-  const products = await getProducts({ size: "large" })
+  const products = await getProducts({ isFeature: true })
   console.log("Number of products:", products.length);
 
   return (
@@ -137,8 +136,6 @@ const HomePage = async () => {
             </Card>
           </div>
         </section>
-    
-      <Footer/>
     </Container>
   )
 }

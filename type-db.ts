@@ -46,7 +46,7 @@ export interface Products {
     id: string; 
     name: string; 
     price: number; 
-    qty?: string; 
+    qty: number; 
     images: {url: string}[]; 
     isFeature: boolean; 
     isArchieve: boolean; 
