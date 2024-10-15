@@ -55,6 +55,9 @@ export interface Products {
     kitchen:string,
     cuisine: string,
     date: string,
+    description:string,
+    ingredients:string,
+    calories:number,
     createAt?:Timestamp,
     updateAt?:Timestamp,
   }
@@ -65,6 +68,7 @@ export interface Products {
     orderItems: Products[],
     address:string,
     order_status: string,
-    createAt?:Timestamp,
+    createAt?:string,
     updateAt?:Timestamp,
+    totalPrice?: string;
   }

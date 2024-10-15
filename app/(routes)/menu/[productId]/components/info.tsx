@@ -14,19 +14,22 @@ const Info = ({ product }: InfoProps) => {
   const cart = useCarts()
   const handleQty = (num: number) => {
     setQty(num)
-    cart.updateQuantity(product.id,num)
+    cart.updateQuantity(product.id, num)
   }
-  const addToCart = (data:Products)=>{
-    cart.addItem({...data, qty:qty})
+  const addToCart = (data: Products) => {
+    cart.addItem({ ...data, qty: qty })
   }
   return (
     <div >
       <h1 className="text-3xl font-bold text-neutral-800"> {product.name}</h1>
       <div className="mt-3 flex items-end justify-between">
         <p className="text-base text-left text-neutral-600">
-          Lorem, ipsum dolor sit amet consectetur adipisicing elit. Sint doloremque sed similique temporibus blanditiis qui, quaerat, culpa tenetur voluptate, dolor alias sunt iste! Quos ad doloremque, eius rem est enim?
+          {product.description}
+          <br />
+          <span className="font-semibold">Ingredients:</span> {product.ingredients}
         </p>
       </div>
+
       <div className="w-full flex items-center justify-start gap-2 flex-wrap px-4 py-4">
         {product.cuisine && (
           <div className="rounded-md bg-emerald-50 px-3 p-y-2 text-base font-semibold capitalize flex items-center gap-2">
@@ -100,7 +103,7 @@ const Info = ({ product }: InfoProps) => {
           Buy now
         </Button>
       </div>
-            
+
     </div>
   )
 }

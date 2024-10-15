@@ -34,8 +34,8 @@ const CartContent = ({ userId }: CartContentProps) => {
 
     const onCheckout =async ()=>{
         const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/checkout`
-            // 'http://localhost:3001/api/T5efehVuTKiOIPOhWgjq/checkout'
+            // `${process.env.NEXT_PUBLIC_API_URL}/checkout`
+            'http://localhost:3001/api/T5efehVuTKiOIPOhWgjq/checkout'
             ,
             {
                 products: cart.items,

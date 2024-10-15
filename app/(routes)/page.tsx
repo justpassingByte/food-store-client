@@ -21,11 +21,11 @@ const HomePage = async () => {
             Hungry ?
           </p>
           <h2 className="text-5xl font-bold tracking-wider uppercase text-neutral-700 my-4">
-            Just come to <span className="block py-4"> Foodie and order</span>
+            Just come to <span className="block py-4"> Serenity and order</span>
           </h2>
           <p className="text-base text-center md:text-left text-neutral-500 my-4">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quis eius velit voluptatum temporibus numquam dolores ipsum, ipsam nobis tempora? Quibusdam veritatis fugiat dolor eaque placeat. Corporis voluptas cum odit quia?
-          </p>
+          At Serenity Nutrition, we offer a unique dining experience that harmonizes natural ingredients with mindful nourishment. Our menu is crafted from organic, wholesome foods, prepared with care to provide not only delicious flavors but also optimal health benefits. Each dish is thoughtfully designed to promote balance, vitality, and inner well-being. At Serenity Nutrition, we are committed to serving meals that nourish both your body and soul, creating a serene and fulfilling dining experience.
+           </p>
           <div className="my-4 flex text-center justify-center gap-6 w-full md:w-auto">
             <Link href={"/menu"}>
               <Button className="px-8 md:px-16 py-4 md:py-6 rounded-full bg-hero ">

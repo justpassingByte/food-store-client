@@ -43,7 +43,7 @@ const Header = ({userId} : HeaderProps) => {
                 <Link href={"/"}
                         className='uppercase flex gap-x-2 font-bold text-neutral-700 text-lg md:text-xl'
                 >
-                    Food
+                    Serenity Nutrition
                 </Link>
                 <MainNav scrolled={isScrolled}/>
                 {userId? (
