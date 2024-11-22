@@ -12,9 +12,10 @@ const MainNav = ({ className, scrolled }: MainNavProps) => {
     const routes = [
         { href: "/", label: "Home", active: pathname === `/`, },
         { href: "/menu", label: "Menu", active: pathname === `/menu`, },
+        { href: "/macrobiotics", label: "Macrobiotics", active: pathname === `/Macrobiotics`, },
         { href: "/orders", label: "Orders", active: pathname === `/orders`, },
-        { href: "/about", label: "About", active: pathname === `/about`, },
-        { href: "/contact", label: "Contact", active: pathname === `/contact`, },
+        { href: "/#about", label: "About", active: pathname === `/about`, },
+        { href: "/#contact", label: "Contact", active: pathname === `/contact`, },
     ]
 
     return (

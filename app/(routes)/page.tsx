@@ -57,7 +57,7 @@ const HomePage = async () => {
         ))}
       </section>
 {/* why choose us */}
-<section className=" my-4 py-12 flex flex-col items-center justify-center">
+<section id="about" className=" my-4 py-12 flex flex-col items-center justify-center">
           <h2 className="text-5xl md:text-5xl font-bold tracking-wider uppercase text-neutral-700 my-4">
             Why choose us ?
           </h2>

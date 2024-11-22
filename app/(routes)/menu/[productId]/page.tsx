@@ -1,4 +1,3 @@
-"use client"
 import Box from '@/components/box'
 import Container from '@/components/container'
 import { ChevronRight, Home } from 'lucide-react'
@@ -17,11 +16,8 @@ interface ProductPageProps {
 }
 
 const ProductPage = async ({ params }: ProductPageProps) => {
-  // Fetch the product only once
   const product = await getProduct(params.productId)
-
-  // Check if product exists before fetching suggested products
-  const suggestedProducts = product ? await getProducts({ category: product?.category }) : []
+  const suggestedProducts = await getProducts({ category: product?.category }) 
 
   return (
     <div>

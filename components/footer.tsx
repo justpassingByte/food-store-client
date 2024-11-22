@@ -4,7 +4,7 @@ import Container from './container'
 
 const Footer = () => {
   return (
-    <footer className="bg-white ">
+    <footer id='contact' className="bg-white ">
       <Container>
         <div className="w-full  bg-hero/30 grid grid-cols-2 md:grid-cols-4 px-4 md:px-12 py-8">
           <div className="flex flex-col items-start justify-start gap-3">

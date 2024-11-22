@@ -15,7 +15,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Multi Store Admin Portal",
+  title: "Thuc duong Store",
   description: "Managing your store",
 };
 
@@ -23,15 +23,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
 
-  const {userId} = auth()
-
   return (
     <html lang="en">
       <body className={poppins.className}>
         <ToastProvider/>
         <img src="/images/hero.svg" className="absolute -z-10 right-0 w-full md:w-[60%]" alt=""/>
         <ClerkProvider>
-        <Header userId = {userId}/>
+          <Header />
           {children}
         </ClerkProvider>
         <Footer/>

@@ -7,12 +7,13 @@ import {UserButton} from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import MainNav from '@/components/mainNav'
 import CartActionButton from './ui/cart-action'
-interface HeaderProps{
-    userId: string | null
-}
-const Header = ({userId} : HeaderProps) => {
+import { useAuth } from "@clerk/nextjs"
+
+
+const Header = () => {
 
     const [isScrolled, setIsScrolled] = useState(false)
+    const { isSignedIn } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -46,12 +47,11 @@ const Header = ({userId} : HeaderProps) => {
                     Serenity Nutrition
                 </Link>
                 <MainNav scrolled={isScrolled}/>
-                {userId? (
+                {isSignedIn ? (
                     <div className='ml-4 flex items-center space-x-4'>
                         <UserButton afterSignOutUrl="/"/>
                         <CartActionButton/>
                     </div>
-
                 ) : (
                     <div className='flex items-center space-x-2 ml-4'>
                         <Link

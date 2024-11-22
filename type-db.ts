@@ -58,6 +58,10 @@ export interface Products {
     description:string,
     ingredients:string,
     calories:number,
+    protein:number,
+    carbs:number,
+    fat:number,
+    type:string,
     createAt?:Timestamp,
     updateAt?:Timestamp,
   }
@@ -72,3 +76,27 @@ export interface Products {
     updateAt?:Timestamp,
     totalPrice?: string;
   }
+  export interface Combos {
+    id: string; 
+    name: string; 
+    price: number; 
+    products:Products[],
+    images: {url: string}[]; 
+    description:string,
+    createAt?:Timestamp,
+    updateAt?:Timestamp,
+  }
+  export interface HealthProfile {
+    activityLevel: string;
+    age: string;
+    allergies?: Array<{ingredient: string; severity: string}>;
+    calories: number;
+    createdAt: Date;
+    diseases: string[];
+    gender: string;
+    height: string;
+    protein: number;
+    userId: string;
+    weight: string;
+  }
+  
