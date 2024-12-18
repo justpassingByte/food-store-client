@@ -2,11 +2,11 @@
 import { Button } from "@/components/ui/button"
 import useCarts from "@/hooks/usecart"
 import { cn } from "@/lib/utils"
-import { Products } from "@/type-db"
+import { Orders, Products } from "@/type-db"
 import { CookingPot, CreditCard, ShoppingCart, Soup, SquareActivity, Utensils, Search, Loader2, X } from "lucide-react"
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { checkNutritionSafety } from "@/lib/nutrition-utils"
+import { calculateTotalNutrition, calculateTotalNutritionFromHistory, checkNutritionSafety } from "@/lib/nutrition-utils"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -17,9 +17,20 @@ import Modal from "./modal"
 import debounce from 'lodash/debounce'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ShieldAlert } from "lucide-react"
+import getOrders from "@/action/get-orders"
+import { getDailyNutritionalLimits } from "@/lib/nutrition-utils"
+import ModalWarn from "./modalWarning"
 
 interface InfoProps {
   product: Products
+}
+interface NutritionInfo {
+  totalCaloriesToday: number;
+  dailyCalorieLimit: number;
+  totalProteinToday: number;
+  dailyProteinLimit: number;
+  consumedCalories: number;
+  consumedProtein: number;
 }
 
 // Thêm interface cho RelativePerson
@@ -42,6 +53,11 @@ interface NutritionCheck {
 
 // Sửa lại interface Relative
 interface Relative {
+  isRegistered: any
+  relativeName: string
+  age: number
+  gender: string
+  allergies: []
   email: string;
   userId: string;
   name: string;
@@ -92,12 +108,12 @@ const Info = ({ product }: InfoProps) => {
 
   const fetchRelatives = async () => {
     if (!userId) return;
-    
+
     console.log('Fetching relatives for userId:', userId);
     try {
       const response = await axios.get(`/api/users/${userId}/relatives`);
       console.log('API Response:', response.data);
-      
+
       if (response.data?.relatives) {
         setRelatives(response.data.relatives);
       } else {
@@ -115,7 +131,7 @@ const Info = ({ product }: InfoProps) => {
       console.error('Current user ID is missing');
       return;
     }
-    
+
     try {
       // Log dữ liệu trước khi gửi request
       console.log('Adding relative with data:', {
@@ -133,9 +149,9 @@ const Info = ({ product }: InfoProps) => {
         userId: relativeUserId, // userId của người thân
         currentUserId: userId // thêm userId của người đang đăng nhập
       });
-      
+
       console.log('Add relative response:', response.data);
-      
+
       if (response.data.success) {
         await fetchRelatives();
         toast.success('Đã thêm người thân thành công');
@@ -157,7 +173,7 @@ const Info = ({ product }: InfoProps) => {
           setSearchResults([]);
           return;
         }
-        
+
         console.log('Searching for:', searchValue);
         setIsSearching(true);
         try {
@@ -183,119 +199,166 @@ const Info = ({ product }: InfoProps) => {
     }
   }, [debouncedSearch])
 
+
+
+  const [open, setOpen] = useState(false);
+  const [nutritionInfo, setNutritionInfo] = useState<NutritionInfo>({
+    totalCaloriesToday: 0,
+    dailyCalorieLimit: 0,
+    totalProteinToday: 0,
+    dailyProteinLimit: 0,
+    consumedCalories: 0,
+    consumedProtein: 0,
+  });
+
+
   const onCheckoutSelf = async () => {
     try {
       if (!userId) {
-        toast.error("Vui lòng đăng nhập để đặt hàng")
-        return
+        toast.error("Vui lòng đăng nhập để đặt hàng");
+        return;
       }
 
-      const response = await axios.post(
-        'http://localhost:3001/api/T5efehVuTKiOIPOhWgjq/checkout',
-        {
-          products: [{ ...product, qty }],
-          userId,
-          orderType: 'SELF'
-        }
-      )
+      const orders = await fetchOrderHistory();
 
-      window.location = response.data.url
-      
+      if (!Array.isArray(orders)) {
+        throw new Error("Lịch sử đặt hàng không hợp lệ");
+      }
+
+      const totalNutritionHistory = calculateTotalNutritionFromHistory(orders);
+      const totalNutrition = calculateTotalNutrition(product, qty);
+
+      const totalCaloriesToday = totalNutritionHistory.calories + totalNutrition.calories;
+      const totalProteinToday = totalNutritionHistory.protein + totalNutrition.protein;
+
+      const { dailyCalorieLimit, dailyProteinLimit } = await getDailyNutritionalLimits(userId);
+
+      setNutritionInfo({
+        totalCaloriesToday,
+        dailyCalorieLimit,
+        totalProteinToday,
+        dailyProteinLimit,
+        consumedCalories: totalNutritionHistory.calories,
+        consumedProtein: totalNutritionHistory.protein,
+      });
+
+      setOpen(true);
+      await processOrder('SELF');
     } catch (error) {
-      toast.error("Đã có lỗi xảy ra")
-      console.error(error)
+      toast.error("Đã có lỗi xảy ra");
+      console.error(error);
     }
-  }
+  };
+
+
+  // Cập nhật hàm fetchOrderHistory để chỉ lấy đơn hàng trong ngày
+  const fetchOrderHistory = async () => {
+    if (!userId) return 0; // Nếu không có userId, trả về 0
+
+    try {
+
+      // Gửi yêu cầu API với timestamp
+      const response = await getOrders(userId)
+
+      return response; // Giả sử API trả về danh sách đơn hàng
+    } catch (error) {
+      console.error("Lỗi khi lấy lịch sử đặt hàng:", error);
+      return [];
+    }
+  };
 
   const handleOrderForRelative = async () => {
     try {
       if (!userId) {
-        toast.error("Vui lòng đăng nhập để đặt hàng")
-        return
+        toast.error("Vui lòng đăng nhập để đặt hàng");
+        return;
       }
 
       if (!selectedRelative) {
-        toast.error("Vui lòng chọn người nhận")
-        return
+        toast.error("Vui lòng chọn người nhận");
+        return;
       }
 
-      // Kiểm tra nếu có cảnh báo
-      if (nutritionWarnings && nutritionWarnings.warnings.some(warning => warning.includes("⚠️"))) {
-        console.log("Phát hiện cảnh báo dinh dưỡng")
-        return // Dừng quy trình thanh toán
+      // Lấy lịch sử đặt hàng thành công
+      const orders = await fetchOrderHistory();
+      // Kiểm tra nếu orders là một mảng hợp lệ
+      if (!Array.isArray(orders)) {
+        throw new Error("Lịch sử đặt hàng không hợp lệ");
+      }
+      const totalNutritionHistory = calculateTotalNutritionFromHistory(orders);
+
+      const totalNutrition = calculateTotalNutrition(product, qty);
+
+      const totalCaloriesToday = totalNutritionHistory.calories + totalNutrition.calories;
+      const totalProteinToday = totalNutritionHistory.protein + totalNutrition.protein;
+
+      const { dailyCalorieLimit, dailyProteinLimit } = await getDailyNutritionalLimits(selectedRelative);
+
+      console.log("Total Calories Today:", totalCaloriesToday);
+      console.log("Total Protein Today:", totalProteinToday);
+      console.log("Calorie Limit:", dailyCalorieLimit);
+      console.log("Protein Limit:", dailyProteinLimit);
+
+      // Kiểm tra giới hạn calo và protein
+      if (totalCaloriesToday > dailyCalorieLimit || totalProteinToday > dailyProteinLimit) {
+        const confirmIgnore = window.confirm(
+          `Tổng lượng dinh dưỡng vượt quá giới hạn hàng ngày (${dailyCalorieLimit} calo, ${dailyProteinLimit}g protein). Bạn có muốn tiếp tục?`
+        );
+        if (!confirmIgnore) {
+          return; // Dừng quy trình thanh toán nếu không muốn bỏ qua
+        }
       }
 
-      // Nếu không có cảnh báo hoặc đã bỏ qua cảnh báo, tiếp tục thanh toán
-      await processRelativeOrder()
-
+      // Tiếp tục đặt hàng
+      await processOrder('RELATIVE');
     } catch (error) {
-      console.error("Lỗi khi đặt hàng:", error)
-      toast.error("Đã có lỗi xảy ra khi đặt hàng")
+      console.error("Lỗi khi đặt hàng:", error);
+      toast.error("Đã có lỗi xảy ra khi đặt hàng");
     }
-  }
+  };
+
+
 
   // Tách riêng phần xử lý thanh toán
-  const processRelativeOrder = async (ignoreWarning: boolean = false) => {
+  const processOrder = async (
+    orderType: 'SELF' | 'RELATIVE',
+    ignoreWarning: boolean = false
+  ) => {
     try {
-      console.log("Bắt đầu xử lý đơn hàng cho:", selectedRelative)
-      
+      console.log(
+        `Bắt đầu xử lý đơn hàng cho: ${orderType === 'RELATIVE' ? selectedRelative : userId}`
+      );
+  
+      const payload = {
+        products: [{ ...product, qty }],
+        userId: orderType === 'RELATIVE' ? selectedRelative : userId,
+        orderedBy: userId,
+        orderType,
+        ignoreWarning,
+      };
+  
       const response = await axios.post(
         'http://localhost:3001/api/T5efehVuTKiOIPOhWgjq/checkout',
-        {
-          products: [{ ...product, qty }],
-          userId: selectedRelative,
-          orderedBy: userId,
-          orderType: 'RELATIVE',
-          ignoreWarning: ignoreWarning
-        }
-      )
-
-      window.location = response.data.url
-
+        payload
+      );
+  
+      window.location = response.data.url;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.message || "Lỗi xử lý đơn hàng")
+        toast.error(error.response?.data?.message || 'Lỗi xử lý đơn hàng');
       } else {
-        toast.error("Lỗi xử lý đơn hàng")
+        toast.error('Lỗi xử lý đơn hàng');
       }
-      console.error(error)
+      console.error(error);
     }
-  }
-
-  const handleOrderForSpecificRelative = async (relativeId: string) => {
-    try {
-      setSelectedRelative(relativeId)
-
-      await handleOrderForRelative()
-      
-    } catch (error) {
-      console.error("Lỗi khi xử lý:", error)
-      toast.error("Đã có lỗi xảy ra")
-    }
-  }
-
-  const handleOrder = () => {
-    if (selectedPerson === 'self') {
-      // Xử lý đặt món cho bản thân
-      console.log('Ordering for self')
-    } else {
-      // Xử lý đặt món cho người thân
-      console.log('Ordering for relative')
-    }
-  }
-
-  console.log('Current state:', {
-    showRelatives,
-    selectedPerson,
-    relatives,
-    userId
-  })
+  };
+  
 
   // Sửa lại handler cho Select của shadcn/ui
   const handlePersonChange = async (value: string) => {
     console.log('handlePersonChange called with value:', value)
     setSelectedPerson(value)
-    
+
     if (value === 'relative') {
       console.log('Setting showRelatives to true')
       setShowRelatives(true)
@@ -305,8 +368,7 @@ const Info = ({ product }: InfoProps) => {
     }
   }
 
-  // Thêm log để kiểm tra render
-  console.log('Current state:', { selectedPerson, showRelatives, relatives })
+
 
   // Thêm component AddRelativeModal vào trong component Info
   const AddRelativeModal = useCallback(() => {
@@ -390,9 +452,9 @@ const Info = ({ product }: InfoProps) => {
               <li key={index}>{warning}</li>
             ))}
           </ul>
-          <Button 
-            onClick={() => processRelativeOrder(true)}
-            variant="outline" 
+          <Button
+            onClick={() => processOrder('RELATIVE')}
+            variant="outline"
             className="mt-4"
           >
             Vẫn tiếp tục đặt hàng
@@ -405,28 +467,109 @@ const Info = ({ product }: InfoProps) => {
   // Sửa lại phần xử lý khi chọn người thân
   const handleRelativeSelect = async (relativeId: string) => {
     setSelectedRelative(relativeId)
-    
+
     try {
-      console.log("Đang kiểm tra dinh dưỡng cho:", relativeId)
-      const safetyCheck = await checkNutritionSafety(product, relativeId)
-      console.log("Kết quả kiểm tra dinh dưỡng:", safetyCheck)
+      // Tìm relative được chọn
+      const selectedRel = relatives.find(rel =>
+        rel.isRegistered ? rel.userId === relativeId : rel.relativeName === relativeId
+      );
+
+      if (!selectedRel) {
+        throw new Error("Không tìm thấy thông tin người thân");
+      }
+
+      const safetyCheck = await checkNutritionSafety(product, {
+        userId: userId || '',
+        relativeName: selectedRel.isRegistered ? undefined : selectedRel.relativeName,
+        relativeId: selectedRel.isRegistered ? selectedRel.userId : undefined,
+        isRelative: true
+      })
       setNutritionWarnings(safetyCheck)
     } catch (error) {
       console.error("Lỗi khi kiểm tra dinh dưỡng:", error)
       toast.error("Không thể kiểm tra thông tin dinh dưỡng")
     }
   }
+  useEffect(() => {
+    const fetchNutritionalLimits = async () => {
+      if (!userId) {
+        console.warn("User ID is missing.");
+        return;
+      }
+      try {
+        // Lấy lịch sử đặt hàng thành công
+        const orders = await fetchOrderHistory();
+        // Kiểm tra nếu orders là một mảng hợp lệ
+        if (!Array.isArray(orders)) {
+          throw new Error("Lịch sử đặt hàng không hợp lệ");
+        }
+        const totalNutrition = calculateTotalNutrition(product, qty);
+        const totalNutritionHistory = calculateTotalNutritionFromHistory(orders);
+
+        const totalCaloriesToday = totalNutritionHistory.calories + totalNutrition.calories;
+        const totalProteinToday = totalNutritionHistory.protein + totalNutrition.protein;
+        const { dailyCalorieLimit, dailyProteinLimit } = await getDailyNutritionalLimits(userId);
+
+        console.log("Total Nutrition from history:", totalNutritionHistory);
+
+        console.log("TotalNutrition Of product:", totalNutrition);
+
+        console.log("Calorie Limit:", dailyCalorieLimit);
+        console.log("Protein Limit:", dailyProteinLimit);
+      } catch (error) {
+        console.error("Error fetching nutritional limits:", error);
+      }
+    };
+
+    fetchNutritionalLimits();
+  }, [userId, qty]);
 
   return (
+
     <div className="p-4 space-y-6">
+      <ModalWarn isOpen={open} onClose={() => setOpen(false)}>
+        <h2 className="text-xl font-bold text-gray-900">Thông tin dinh dưỡng</h2>
+
+        {/* Product Info Section */}
+        <div className="mt-4 text-gray-700">
+          <div className="font-semibold text-lg">Thông tin món ăn:</div>
+          <p className="mt-2"><strong>Tên món:</strong> {product.name}</p>
+          <p><strong>Protein:</strong> {product.protein}g</p>
+          <p><strong>Calo:</strong> {product.calories} cal</p>
+        </div>
+
+        {/* Nutritional Limits Section */}
+        <div className="mt-4 text-gray-700">
+          <p><strong>Tổng calo giới hạn:</strong> {nutritionInfo.dailyCalorieLimit} calo</p>
+          <p><strong>Tổng protein giới hạn:</strong> {nutritionInfo.dailyProteinLimit} g</p>
+          <p><strong>Đã tiêu thụ:</strong> {nutritionInfo.consumedCalories} calo, {nutritionInfo.consumedProtein}g protein</p>
+        </div>
+
+        <div className="mt-6 flex justify-end space-x-4">
+          <Button onClick={onCheckoutSelf} className="bg-green-500 text-white">
+            Tiếp tục thanh toán
+          </Button>
+          <Button onClick={() => setOpen(false)} variant="ghost" className="text-gray-500">
+            Điều chỉnh lại
+          </Button>
+        </div>
+      </ModalWarn>
+
+
       <h1 className="text-3xl font-bold text-neutral-800">{product.name}</h1>
-      
+
       {/* Product Info Section */}
       <div className="space-y-4">
         <div className="text-neutral-600">
           {product.description}
           <div className="mt-2">
             <span className="font-semibold">Thành phần:</span> {product.ingredients}
+          </div>
+          <div className="mt-2">
+            <span className="font-semibold">Protein:</span> {product.protein}g
+          </div>
+          <div className="mt-2">
+            <span className="font-semibold">Calo:</span> {product.calories} cal
           </div>
         </div>
 
@@ -540,8 +683,8 @@ const Info = ({ product }: InfoProps) => {
             <div className="p-6 border-b border-gray-100">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-800">Chọn người thân:</h3>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setIsModalOpen(true)}
                   className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 hover:text-blue-700"
@@ -555,34 +698,46 @@ const Info = ({ product }: InfoProps) => {
               {relatives && relatives.length > 0 ? (
                 <div className="space-y-3">
                   {relatives.map((relative) => (
-                    <div 
-                      key={relative.userId} 
+                    <div
+                      key={relative.isRegistered ? relative.userId : relative.relativeName}
                       className={cn(
                         "flex items-center gap-4 p-4 rounded-lg border transition-all cursor-pointer hover:bg-gray-50",
-                        selectedRelative === relative.userId
+                        selectedRelative === (relative.isRegistered ? relative.userId : relative.relativeName)
                           ? "bg-blue-50 border-blue-200"
                           : "bg-white border-gray-200"
                       )}
-                      onClick={() => handleRelativeSelect(relative.userId)}
+                      onClick={() => handleRelativeSelect(relative.isRegistered ? relative.userId : relative.relativeName)}
                     >
                       <input
                         type="radio"
                         name="selectedRelative"
-                        id={`relative-${relative.userId}`}
-                        value={relative.userId}
-                        checked={selectedRelative === relative.userId}
-                        onChange={() => handleRelativeSelect(relative.userId)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        checked={selectedRelative === (relative.isRegistered ? relative.userId : relative.relativeName)}
+                        onChange={() => handleRelativeSelect(relative.isRegistered ? relative.userId : relative.relativeName)}
+                        className="w-4 h-4 text-blue-600"
                       />
-                      <label 
-                        htmlFor={`relative-${relative.userId}`}
-                        className="flex-1 flex items-center justify-between cursor-pointer"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-800">{relative.name}</p>
-                          <p className="text-sm text-gray-500">{relative.email}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-gray-800">
+                            {relative.isRegistered ? relative.name : relative.relativeName}
+                          </p>
+                          {relative.isRegistered ? (
+                            <Badge variant="success" className="text-xs">Đã đăng ký</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Chưa đăng ký</Badge>
+                          )}
                         </div>
-                      </label>
+                        {relative.isRegistered && (
+                          <p className="text-sm text-gray-500">{relative.email}</p>
+                        )}
+                        {!relative.isRegistered && (
+                          <div className="text-sm text-gray-500">
+                            <p>Tuổi: {relative.age} | Giới tính: {relative.gender}</p>
+                            {relative.allergies && (
+                              <p>Dị ứng: {relative.allergies.join(', ')}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -606,7 +761,7 @@ const Info = ({ product }: InfoProps) => {
 
       {/* Render Modal ở cuối component */}
       <AddRelativeModal />
-      
+
       {/* Thêm phần hiển thị cảnh báo sau phần chọn người thân */}
       {showRelatives && selectedRelative && renderNutritionWarnings()}
     </div>
@@ -614,3 +769,4 @@ const Info = ({ product }: InfoProps) => {
 }
 
 export default Info
+

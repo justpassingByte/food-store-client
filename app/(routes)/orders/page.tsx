@@ -1,3 +1,4 @@
+"use client"
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +23,9 @@ import getOrders from '@/action/get-orders'
 import { Orders } from '@/type-db'
 import { Timestamp } from 'firebase/firestore'
 import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
+import { useEffect, useState } from 'react'
+import { db } from "@/lib/firebase";
 
 interface OrdersPageProps {
   searchTerm: string;
@@ -31,11 +35,28 @@ interface OrdersPageProps {
 
 const ordersPerPage = 5
 
-const OrdersPage = async ({ searchTerm = '', statusFilter = 'All', currentPage = 1 }: OrdersPageProps) => {
-  const result = await getOrders()
+const OrdersPage =({ searchTerm = '', statusFilter = 'All', currentPage = 1 }: OrdersPageProps) => {
+  const { userId } = useAuth(); 
+  const [order, setOrder] = useState<Orders[]>([]);
+  const [dateFilter, setDateFilter] = useState('');
 
-  const transformedData = result.map(order => {
-    const totalPrice = order.orderItems.reduce((total, item) => {
+  useEffect(() => {
+    if (!userId) {
+      console.error("User ID is required");
+      return;
+    }
+
+    const loadOrders = async () => {
+      console.log('Loading orders for user:', userId);
+      const orders = await getOrders(userId, dateFilter, statusFilter);
+      setOrder(orders);
+    };
+
+    loadOrders();
+  }, [userId, dateFilter, statusFilter]);
+
+  const transformedData = order.map(order => {
+    const totalPrice = order.orderItems.reduce((total: number, item: any) => {
       const price = item.price || 0;
       const quantity = item.qty || 1;
       return total + price * quantity;
@@ -71,6 +92,24 @@ const OrdersPage = async ({ searchTerm = '', statusFilter = 'All', currentPage =
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder)
 
+  const handleDateFilterChange = (value: string) => {
+    setDateFilter(value);
+    if (value === 'today') {
+      const today = new Date();
+      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+      const dateParam = JSON.stringify({ seconds: Math.floor(startOfDay.getTime() / 1000) });
+      
+      if (userId) {
+        getOrders(userId, dateParam, statusFilter);
+      } else {
+        console.error("User ID is required");
+      }
+    } else {
+      setDateFilter(value);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-16">
       <Card>
@@ -91,7 +130,7 @@ const OrdersPage = async ({ searchTerm = '', statusFilter = 'All', currentPage =
                   defaultValue={searchTerm}
                 />
               </div>
-              <Select defaultValue={statusFilter} name="statusFilter">
+              <Select value={statusFilter} onValueChange={statusFilter} name="statusFilter">
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -103,11 +142,18 @@ const OrdersPage = async ({ searchTerm = '', statusFilter = 'All', currentPage =
                   <SelectItem value="Delivered">Delivered</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={dateFilter} onValueChange={handleDateFilterChange} name="dateFilter">
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Lọc theo ngày" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hôm nay</SelectItem>
+                  <SelectItem value="this-week">Tuần này</SelectItem>
+                  <SelectItem value="whole-time">Toàn bộ thời gian</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Filter by Date
-            </Button>
+        
           </form>
           <div className="rounded-md border">
             <Table>
@@ -123,14 +169,16 @@ const OrdersPage = async ({ searchTerm = '', statusFilter = 'All', currentPage =
               <TableBody>
                 {currentOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/orders/${order.id}`}>{order.id}</Link>
+                    </TableCell>
                     <TableCell>{order.createAt}</TableCell>
                     <TableCell>${order.totalPrice}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${order.order_status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                          order.order_status === 'Processing' ? 'bg-blue-100 text-blue-800' :
-                            order.order_status === 'Shipped' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
+                        order.order_status === 'Processing' ? 'bg-blue-100 text-blue-800' :
+                          order.order_status === 'Shipped' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
                         }`}>
                         {order.order_status}
                       </span>
@@ -157,14 +205,14 @@ const OrdersPage = async ({ searchTerm = '', statusFilter = 'All', currentPage =
               Page {currentPage} of {Math.ceil(filteredOrders.length / ordersPerPage)}
             </div>
             <Button
-  variant="outline"
-  disabled={indexOfLastOrder >= filteredOrders.length}
->
-  <Link href={`?currentPage=${currentPage + 1}&searchTerm=${searchTerm}&statusFilter=${statusFilter}`}>
-    Next
-    <ChevronRightIcon className="h-4 w-4 ml-2" />
-  </Link>
-</Button>
+              variant="outline"
+              disabled={indexOfLastOrder >= filteredOrders.length}
+            >
+              <Link href={`?currentPage=${currentPage + 1}&searchTerm=${searchTerm}&statusFilter=${statusFilter}`}>
+                Next
+                <ChevronRightIcon className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

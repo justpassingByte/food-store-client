@@ -43,6 +43,7 @@ export interface Cuisines {
     updateAt?: Timestamp
 }
 export interface Products {
+    allergens: any
     id: string; 
     name: string; 
     price: number; 

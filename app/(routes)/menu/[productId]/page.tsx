@@ -9,6 +9,8 @@ import getProducts from '@/action/get-products'
 import Info from './components/info'
 import SuggestedProducts from './components/suggested-products'
 
+import { Suspense } from 'react'
+
 interface ProductPageProps {
   params: {
     productId: string
@@ -16,8 +18,10 @@ interface ProductPageProps {
 }
 
 const ProductPage = async ({ params }: ProductPageProps) => {
+ 
   const product = await getProduct(params.productId)
-  const suggestedProducts = await getProducts({ category: product?.category }) 
+  
+  const suggestedProducts = await getProducts({ category: product?.category });
 
   return (
     <div>
@@ -31,20 +35,26 @@ const ProductPage = async ({ params }: ProductPageProps) => {
             Products
           </Link>
         </Box>
-        <div className='px-4 py-10 sm:px-6 lg:px-8 space-y-10'>
-          <div className='lg:grid lg:grid-cols-12 lg:gap-x-8'>
-            {/* Gallery section - 5 columns */}
-            <div className='lg:col-span-5'>
-              <Gallery images={product.images} />
+        <Suspense fallback={<div>Loading...</div>}>
+
+          <div className='px-4 py-10 sm:px-6 lg:px-8 space-y-10'>
+            <div className='lg:grid lg:grid-cols-12 lg:gap-x-8'>
+              {/* Gallery section - 5 columns */}
+              <div className='lg:col-span-5'>
+                <Gallery images={product.images} />
+              </div>
+
+              {/* Info section - 7 columns */}
+              <div className='mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0 lg:col-span-7'>
+                <Info product={product} />
+              </div>
             </div>
 
-            {/* Info section - 7 columns */}
-            <div className='mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0 lg:col-span-7'>
-              <Info product={product} />
-            </div>
+            {/* Ensure suggestedProducts is passed correctly */}
+            <SuggestedProducts products={suggestedProducts} />
+
           </div>
-          <SuggestedProducts products={suggestedProducts}/>
-        </div>
+        </Suspense>
       </Container>
     </div>
   )

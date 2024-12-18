@@ -3,15 +3,18 @@ import Container from "@/components/container"
 import { PopularProducts } from "@/components/popular-content"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardTitle } from "@/components/ui/card"
+import { useAuth } from "@clerk/nextjs"
 import { FileHeart, Salad, Truck } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export const revalidate = 0
 const HomePage = async () => {
   const products = await getProducts({ isFeature: true })
   console.log("Number of products:", products.length);
 
+ 
   return (
     <Container className="px-4 md:px-12">
       <section className="grid grid-cols-1 md:grid-cols-2 py-12 pt-16">

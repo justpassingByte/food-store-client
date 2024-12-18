@@ -6,8 +6,8 @@ import Link from 'next/link'
 import React from 'react'
 import CartContent from './components/cart-content'
 
-const CartPage = () => {
-    const { userId } = auth()
+const CartPage = async () => {
+    const { userId } = await auth()
     return (     
         <div className="flex flex-col min-h-screen"> {/* Set up flex column layout */}
         <Container className="bg-white py-12 my-4 pt-24 flex-grow "> {/* Allow it to grow and set max width */}

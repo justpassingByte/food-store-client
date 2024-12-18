@@ -72,56 +72,56 @@ function MenuClient({ initialProducts, categories, sizes, kitchens, cuisines, us
         })
     }
 
-    useEffect(() => {
-        const loadUserDataAndFilterProducts = async () => {
-            try {
-                setIsLoading(true)
-                console.log('Initial Products:', initialProducts)
-                
-                if (!user) {
-                    console.log('No user, showing all products')
-                    setFilteredProducts(initialProducts)
-                    return
-                }
+   useEffect(() => {
+    const loadUserDataAndFilterProducts = async () => {
+        try {
+            setIsLoading(true);
 
-                const userPreferences = userData?.length ? userData[0] : await fetchUserData(user.id)
-                console.log('User Preferences:', userPreferences)
-                
-                if (!userPreferences) {
-                    console.log('No user preferences, showing all products')
-                    setFilteredProducts(initialProducts)
-                    return
-                }
-
-                const { calories, protein, diseases, allergies } = userPreferences
-                console.log('User values:', { calories, protein, diseases, allergies })
-
-                if (!calories || !protein || !diseases || !allergies) {
-                    console.log('Missing some user preferences')
-                    setFilteredProducts(initialProducts)
-                    return
-                }
-
-                const filtered = filterProductsByUserPreferences(
-                    initialProducts,
-                    calories,
-                    protein,
-                    diseases,
-                    allergies
-                )
-                console.log('Filtered Products:', filtered)
-
-                setFilteredProducts(filtered)
-            } catch (error) {
-                console.error('Error filtering products:', error)
-                setFilteredProducts(initialProducts)
-            } finally {
-                setIsLoading(false)
+            if (!user) {
+                console.log('No user, showing all products');
+                setFilteredProducts(initialProducts);
+                return;
             }
-        }
 
-        loadUserDataAndFilterProducts()
-    }, [user, initialProducts, userData])
+            const userPreferences = userData?.length ? userData[0] : await fetchUserData(user.id);
+            console.log('User Preferences:', userPreferences);
+
+            if (!userPreferences) {
+                console.log('No user preferences, showing all products');
+                setFilteredProducts(initialProducts);
+                return;
+            }
+
+            const { calories, protein, diseases, allergies } = userPreferences;
+            console.log('User values:', { calories, protein, diseases, allergies });
+
+            if (!calories || !protein || !diseases || !allergies) {
+                console.log('Missing some user preferences');
+                setFilteredProducts(initialProducts);
+                return;
+            }
+
+            const filtered = filterProductsByUserPreferences(
+                initialProducts,
+                calories,
+                protein,
+                diseases,
+                allergies
+            );
+            console.log('Filtered Products:', filtered);
+
+            setFilteredProducts(filtered);
+        } catch (error) {
+            console.error('Error filtering products:', error);
+            setFilteredProducts(initialProducts);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    loadUserDataAndFilterProducts();
+}, [user]); 
+
 
     console.log('Current filteredProducts:', filteredProducts)
 

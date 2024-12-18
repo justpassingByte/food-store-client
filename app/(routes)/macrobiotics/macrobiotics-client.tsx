@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import Link from "next/link"
 import { saveUserData } from '@/action/user-data'
+import { Timestamp } from 'firebase/firestore'
 
 type UserData = {
     age: string;
@@ -26,6 +27,8 @@ type UserData = {
     activityLevel: string;
     diseases: string[];
     allergies: string[];
+    relativeName?: string;
+    isRelative?: boolean;
 }
 
 type FormData = UserData
@@ -42,6 +45,7 @@ const DISEASES = [
     { id: 'hypertension', label: 'Huyết áp cao' },
     { id: 'celiac', label: 'Bệnh Celiac' },
     { id: 'kidney', label: 'Bệnh thận' },
+    {id: 'pregnant', label: 'Mang thai'}
 ]
 
 const ALLERGIES = [
@@ -50,6 +54,15 @@ const ALLERGIES = [
     { id: 'dairy', label: 'Sữa' },
     { id: 'egg', label: 'Trứng' },
 ]
+
+const CardComponent = memo(({ title, children }) => (
+    <Card className="w-full shadow-xl mb-8">
+        <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+    </Card>
+))
 
 export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }) {
     const { user } = useUser()
@@ -63,6 +76,8 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
         activityLevel: '',
         diseases: [],
         allergies: [],
+        relativeName: '',
+        isRelative: false,
     })
     const [calculatedResults, setCalculatedResults] = useState<CalculatedResults>(null)
     const [isSaving, setIsSaving] = useState(false)
@@ -81,6 +96,8 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
                         activityLevel: userData.activityLevel || '',
                         diseases: userData.diseases || [],
                         allergies: userData.allergies || [],
+                        relativeName: userData.relativeName || '',
+                        isRelative: userData.isRelative || false,
                     })
                 }
             } catch (error) {
@@ -101,7 +118,7 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
 
     const handleCheckboxChange = (type: 'diseases' | 'allergies') => (value: string) => {
         setFormData(prev => {
-            const currentArray = prev[type]
+            const currentArray = prev[type] || []
             const newArray = currentArray.includes(value)
                 ? currentArray.filter(item => item !== value)
                 : [...currentArray, value]
@@ -109,9 +126,16 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
         })
     }
 
+    const handleIsRelativeChange = (checked: boolean) => {
+        setFormData(prev => ({
+            ...prev,
+            isRelative: checked
+        }))
+    }
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
-        const { age, gender, weight, height, activityLevel, diseases, allergies } = formData
+        const { age, gender, weight, height, activityLevel, diseases, allergies,relativeName, isRelative  } = formData
         
         // Tính toán BMR
         let bmr = gender === 'male'
@@ -157,7 +181,10 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
                 await saveUserData(user.id, {
                     ...formData,
                     calories,
-                    protein
+                    protein,
+                    relativeName: relativeName || '',
+                    isRelative: isRelative || false,
+                    createdAt: Timestamp.now(),
                 })
                 setCalculatedResults({ calories, protein, diseases, allergies })
                 console.log('User data and DRI results saved successfully')
@@ -267,7 +294,7 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
                             </div>
                             <div className="space-y-4">
                                 <div>
-                                    <Label className="text-lg font-semibold">Bệnh lý</Label>
+                                    <Label className="text-md">Pathology</Label>
                                     <div className="grid grid-cols-2 gap-4 mt-2">
                                         {DISEASES.map((disease) => (
                                             <div key={disease.id} className="flex items-center space-x-2">
@@ -291,35 +318,47 @@ export function MacrobioticsClient({ initialData }: { initialData?: UserData[] }
                                     </div>
                                 </div>
 
-                                <div>
-                                    <Label className="text-lg font-semibold">Dị ứng thực phẩm</Label>
-                                    <div className="grid grid-cols-2 gap-4 mt-2">
-                                        {ALLERGIES.map((allergy) => (
-                                            <div key={allergy.id} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={allergy.id}
-                                                    checked={formData.allergies.includes(allergy.id)}
-                                                    onCheckedChange={(checked: boolean) => {
-                                                        if (checked) {
-                                                            handleCheckboxChange('allergies')(allergy.id)
-                                                        }
-                                                    }}
-                                                />
-                                                <Label 
-                                                    htmlFor={allergy.id}
-                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                                >
-                                                    {allergy.label}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div>
+                                <Label className="text-md">Food allergies</Label>
+                                <div className="grid grid-cols-2 gap-4 mt-2">
+                                    {ALLERGIES.map((allergy) => (
+                                        <div key={allergy.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={allergy.id}
+                                                checked={formData.allergies.includes(allergy.id)}
+                                                onCheckedChange={(checked: boolean) => {
+                                                    if (checked) {
+                                                        handleCheckboxChange('allergies')(allergy.id)
+                                                    }
+                                                }}
+                                            />
+                                            <Label 
+                                                htmlFor={allergy.id}
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            >
+                                                {allergy.label}
+                                            </Label>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                            <Button type="submit" className="w-full" disabled={isSaving}>
-                                {isSaving ? 'Saving...' : 'Calculate and Save'}
-                            </Button>
-                        </form>
+                            
+                            <div>
+                                <Label htmlFor="relativeName">Relative Name (if applicable)</Label>
+                                <Input id="relativeName" name="relativeName" value={formData.relativeName} onChange={handleInputChange} />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    checked={formData.isRelative}
+                                    onCheckedChange={handleIsRelativeChange}
+                                />
+                                <Label>For a relative?</Label>
+                            </div>
+                        </div>
+                        <Button type="submit" className="w-full" disabled={isSaving}>
+                            {isSaving ? 'Saving...' : 'Calculate and Save'}
+                        </Button>
+                    </form>
 
                         {calculatedResults && (
                             <div className="mt-6 p-4 bg-gradient-to-r from-purple-100 to-blue-100 rounded-md shadow-inner">

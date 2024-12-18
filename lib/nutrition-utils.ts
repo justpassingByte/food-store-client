@@ -1,4 +1,4 @@
-import { Products } from "@/type-db";
+import { Orders, Products } from "@/type-db";
 import { getHealthProfile } from "./health-profile";
 
 interface NutritionCheck {
@@ -11,18 +11,105 @@ interface NutritionCheck {
   warnings: string[];
 }
 
-export const checkNutritionSafety = async (
-  product: Products,
-  relativeId: string
-): Promise<NutritionCheck> => {
-  try {
-    console.log('Đang kiểm tra dinh dưỡng cho:', relativeId);
-    console.log('Thông tin sản phẩm:', product);
+interface RelativeData {
+  userId: string;
+  relativeName?: string;
+  relativeId?: string;
+  isRelative: boolean;
+}
+interface DailyNutritionalLimits {
+  dailyCalorieLimit: number;
+  dailyProteinLimit: number;
+}
+interface Nutrition {
+  calories: number;
+  protein: number;
+}
+export const calculateTotalNutrition = (product: Products, qty: number): Nutrition => {
+  const calories = product.calories || 0;
+  const protein = product.protein || 0;
 
-    const healthProfile = await getHealthProfile(relativeId);
+  return {
+    calories: calories * qty,
+    protein: protein * qty,
+  };
+};
+
+export const calculateTotalNutritionCart = (products: Products[]): Nutrition => {
+  return products.reduce(
+    (total, product) => {
+      total.calories += product.calories * product.qty;
+      total.protein += product.protein * product.qty;
+      return total;
+    },
+    { calories: 0, protein: 0 }
+  );
+};
+
+export const calculateTotalNutritionFromHistory = (orders: Orders[]): Nutrition => {
+  const shippedOrders = orders.filter(order => order.order_status === 'shipped');
+  console.log("Shipped Orders:", shippedOrders);
+
+  return shippedOrders.reduce(
+    (total, order) => {
+      const orderNutrition = order.orderItems.reduce(
+        (orderTotal, product) => {
+          console.log("Product Details:", product);
+
+          const productNutrition = calculateTotalNutrition(product,product.qty || 1);
+          orderTotal.calories += productNutrition.calories;
+          orderTotal.protein += productNutrition.protein;
+          return orderTotal;
+        },
+        { calories: 0, protein: 0 }
+      );
+
+      total.calories += orderNutrition.calories;
+      total.protein += orderNutrition.protein;
+      return total;
+    },
+    { calories: 0, protein: 0 }
+  );
+};
+
+export const getDailyNutritionalLimits = async (id: string): Promise<DailyNutritionalLimits> => {
+  try {
+    const healthProfile = await getHealthProfile(id);
 
     if (!healthProfile) {
-      console.warn('No health profile found for relative:', relativeId);
+      console.warn('No health profile found for ID:', id);
+      return {
+        dailyCalorieLimit: 2000, // Giá trị mặc định
+        dailyProteinLimit: 50,   // Giá trị mặc định
+      };
+    }
+
+    return {
+      dailyCalorieLimit: healthProfile.calories || 2000,
+      dailyProteinLimit: healthProfile.protein || 50,
+    };
+  } catch (error) {
+    console.error('Error fetching health profile:', error);
+    return {
+      dailyCalorieLimit: 2000, // Giá trị mặc định khi lỗi
+      dailyProteinLimit: 50,
+    };
+  }
+};
+export const checkNutritionSafety = async (
+  product: Products,
+  relativeData: RelativeData
+): Promise<NutritionCheck> => {
+  try {
+    console.log('Đang kiểm tra dinh dưỡng cho:', relativeData.relativeId);
+    console.log('Thông tin sản phẩm:', product);
+
+    const healthProfile = await getHealthProfile(
+      relativeData.relativeId || relativeData.userId
+    );
+  
+    if (!healthProfile) {
+      console.warn('No health profile found for relative:', relativeData.relativeId);
       return {
         isAllergic: false,
         allergicIngredients: [],
@@ -41,7 +128,7 @@ export const checkNutritionSafety = async (
         ].filter(Boolean) as string[]
       };
     }
-
+  
     const warnings: string[] = [];
     const allergicIngredients: string[] = [];
 
@@ -103,9 +190,9 @@ export const checkNutritionSafety = async (
     if (warnings.length === 0) {
       warnings.push('✅ Món ăn phù hợp với chế độ dinh dưỡng');
       warnings.push(`📊 Thông tin dinh dưỡng:`);
-      warnings.push(`   • Calories: ${adjustedNutrition.calories}kcal`);
-      warnings.push(`   • Protein: ${adjustedNutrition.protein}g`);
-      warnings.push(`   • Carbs: ${product.carbs}g`);
+      warnings.push(`   • Calories: ${adjustedNutrition.calories || 0}kcal`);
+      warnings.push(`   • Protein: ${product.protein || 0}g`);
+      warnings.push(`   • Carbs: ${product.carbs || 0}g`);
       // if (product.sodium) warnings.push(`   • Natri: ${product.sodium}mg`);
       // if (product.saturatedFat) warnings.push(`   • Chất béo bão hòa: ${product.saturatedFat}g`);
     }
@@ -137,3 +224,4 @@ export const checkNutritionSafety = async (
     };
   }
 }; 
+ 
